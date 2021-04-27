@@ -1,0 +1,227 @@
+---
+title: "Product Sales"
+output: 
+  flexdashboard::flex_dashboard:
+    theme: flatly
+    orientation: rows
+    vertical_layout: scroll
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+```
+
+
+
+
+```{r}
+library(openxlsx)
+library(reshape2)
+library(plotly)
+library(ggplot2)
+library(dplyr)
+sales <- read.xlsx("dataset sales.xlsx", detectDates = TRUE)
+sales$Region <- as.factor(sales$Region)
+sales$Product <- as.factor(sales$Product)
+sales$Customer.Type <- as.factor(sales$Customer.Type)
+sales$Date <- format(
+  as.Date(sales$Date),
+  "%d-%m-%Y"
+)
+colnames(sales)[4] <- "Name"
+summarypro2sum <- aggregate(
+  cbind(
+    Sales
+  )~Region+Product+Date+Customer.Type+Name,
+  data = sales,
+  sum
+)
+tanggal.split <- colsplit(
+  summarypro2sum$Date,
+  "-",
+  c("Day", "Month", "Year")
+)
+summarypro2sumdatesplitted <- cbind(
+  summarypro2sum,
+  tanggal.split
+)
+main <- summarypro2sumdatesplitted
+
+sales$ID <- 1:length(sales$Region)
+
+# sales by region
+reg <- aggregate(
+  cbind(
+    Sales
+  )~Region,
+  data = sales,
+  sum
+)
+regpro <- aggregate(
+  cbind(
+    Sales
+  )~Region+Product,
+  data = sales,
+  sum
+)
+regpropivot <- dcast(
+  sales[,c("Region", "Product", "Sales")],
+  Region~Product,
+  sum
+)
+main$Month <- gsub(1, "Jan", main$Month)
+main$Month <- gsub(2, "Feb", main$Month)
+main$Month <- gsub(3, "Mar", main$Month)
+main$Month <- gsub(4, "Apr", main$Month)
+main$Month <- gsub(5, "Mei", main$Month)
+main$Month <- gsub(6, "Jun", main$Month)
+main$Month <- gsub(7, "Jul", main$Month)
+main$Month <- gsub(8, "Aug", main$Month)
+main$Month <- gsub(9, "Sep", main$Month)
+main$Month <- gsub(10, "Oct", main$Month)
+main$Month <- gsub(11, "Nov", main$Month)
+main$Month <- gsub(12, "Dec", main$Month)
+delapan <- filter(main, as.factor(main$Year)== '2018')
+sembilan <- filter(main, as.factor(main$Year)== '2019')
+
+
+bymo18 <- aggregate(
+  cbind(
+    Sales
+  )~Product+Year,
+  data = main,
+  mean
+)
+```
+General 
+===
+Row {data-width=150}
+-----------------------------------------------------------------------
+
+### Total regions
+```{r}
+lenregions <- length(levels(main$Region))
+valueBox(
+  value = lenregions,
+  icon = "fa-globe",
+  caption = "Regions",
+  color = "green"
+)
+```
+
+
+### Total product
+```{r}
+lenproduct <- length(levels(main$Product))
+valueBox(
+  value = lenproduct,
+  icon = "fa-box-open",
+  caption = "Products",
+  color = "orange"
+)
+```
+
+### Total custype
+```{r}
+lentype <- length(levels(main$Customer.Type))
+valueBox(
+  value = lentype,
+  icon = "fa-store",
+  caption = "Customer Types",
+  color = "#d45079"
+)
+```
+
+### Total saler
+```{r}
+lensaler <- length(levels(as.factor(main$Name)))
+valueBox(
+  value = lensaler,
+  icon = "far fa-users",
+  caption = "Salers",
+  color = "#6e5773"
+)
+```
+
+
+
+Column 
+-----------------------------------------------------------------------
+
+### Product Sales all Regions 
+
+```{r}
+p <- plot_ly(
+  data = regpropivot,
+  x = ~Region,
+  y = ~regpropivot$`Head Light`,
+  type = 'scatter',
+  name = "Head Light",
+  mode = 'lines'
+)%>%
+  add_trace(
+    y = ~Helm,
+    name = "Helm",
+    mode = "lines"
+  )%>%
+  add_trace(
+    y = ~Velg,
+    name = "Velg",
+    mode = "lines"
+  ) %>%
+  layout(
+    yaxis = list(title="Jumlah Penjualan")
+    
+  )
+
+p
+
+```
+
+
+Column 
+-----------------------------------------------------------------------
+
+### Product Sales per Year
+
+```{r}
+plot_ly(
+  filter(bymo18, bymo18$Year==2019),
+  x = ~Product,
+  y = ~Sales,
+  name = "2019",
+  type = "scatter",
+  mode = 'lines'
+) %>%
+  add_trace(
+    data = filter(bymo18, bymo18$Year==2018),
+    y = filter(bymo18, bymo18$Year==2018)$Sales,
+    name = "2018",
+    mode ='lines'
+  )
+```
+
+
+### Products Sales
+
+```{r}
+plot_ly(
+  data = regpropivot,
+  x = regpropivot$Region,
+  y = regpropivot$`Head Light`,
+  type = 'bar',
+  name = "Head Light"
+) %>%
+  add_trace(
+    y = regpropivot$Helm,
+    name = "Helm"
+  ) %>%
+  add_trace(
+    y = regpropivot$Velg,
+    name = "Velg"
+  ) %>%
+  layout(
+    yaxis = list(title = "Sales"), barmode = "group"
+  )
+```
+
